@@ -25,66 +25,62 @@
 - 支持模型：wanx2.1-i2v-turbo, wanx2.1-i2v-plus
 - 支持分辨率：480P, 720P
 - 丰富的特效模板：
-  - **通用特效**：解压捏捏(squish)、转圈圈(rotation)、戳戳乐(poke)、气球膨胀(inflate)、分子扩散(dissolve)
-  - **单人特效**：时光木马(carousel)、爱你哟(singleheart)、摇摆时刻(dance1)、头号甩舞(dance2)、星摇时刻(dance3)、人鱼觉醒(mermaid)、学术加冕(graduation)、巨兽追袭(dragon)、财从天降(money)
-  - **单人或动物特效**：魔法悬浮(flying)、赠人玫瑰(rose)、闪亮玫瑰(crystalrose)
-  - **双人特效**：爱的抱抱(hug)、唇齿相依(frenchkiss)、双倍心动(coupleheart)
+  - 通用特效：解压捏捏(squish)、转圈圈(rotation)、戳戳乐(poke)、气球膨胀(inflate)、分子扩散(dissolve)
+  - 单人特效：时光木马(carousel)、爱你哟(singleheart)、摇摆时刻(dance1)、头号甩舞(dance2)、星摇时刻(dance3)、人鱼觉醒(mermaid)、学术加冕(graduation)、巨兽追袭(dragon)、财从天降(money)
+  - 单人或动物特效：魔法悬浮(flying)、赠人玫瑰(rose)、闪亮玫瑰(crystalrose)
+  - 双人特效：爱的抱抱(hug)、唇齿相依(frenchkiss)、双倍心动(coupleheart)
 
 ## 安装方法
 
 ### 1. 环境准备
-确保已安装ComfyUI和必要的Python依赖：
+确保已安装 ComfyUI 和必要的 Python 依赖：
 ```bash
 pip install requests pillow numpy torch
 ```
 
-### 2. 获取API密钥
-1. 访问[阿里云百炼平台](https://bailian.console.aliyun.com/)
-2. 创建应用并获取API Key
-3. 设置环境变量：
-   ```bash
-   export DASHSCOPE_API_KEY="your_api_key_here"
-   ```
-   或在Windows中：
-   ```cmd
-   set DASHSCOPE_API_KEY=your_api_key_here
-   ```
+### 2. 获取 API 密钥
+1. 访问阿里云百炼平台（模型工作室），创建应用并获取 API Key
+2. 本插件不需要设置系统环境变量。请在 ComfyUI 中通过 `阿里云API密钥` 节点输入你的 Key。
 
 ### 3. 安装插件
-1. 将插件文件复制到ComfyUI的`custom_nodes`目录下：
-   ```
-   ComfyUI/custom_nodes/comfyui-aliyun-video/
-   ├── __init__.py
-   ├── nodes.py
-   └── README.md
-   ```
-
-2. 重启ComfyUI
+1. 将插件文件复制到 ComfyUI 的 `custom_nodes` 目录下：
+```
+ComfyUI/custom_nodes/comfyui-aliyun-wan2.2api/
+├── __init__.py
+├── nodes.py
+└── README.md
+```
+2. 重启 ComfyUI
 
 ## 使用方法
 
+### 通用步骤（所有阿里云视频节点都适用）
+1. 在节点菜单中添加 `Aliyun Video` -> `阿里云API密钥` 节点
+2. 在该节点的 `api_key` 输入框中填入你的 API Key
+3. 将该节点的输出连接到任意阿里云视频节点的 `api_key` 输入口
+
 ### 1. 文生视频节点
-- 在节点菜单中找到"Aliyun Video" -> "阿里云文生视频"
+- 在节点菜单中找到 "Aliyun Video" -> "阿里云文生视频"
 - 输入文本提示词
 - 选择模型和分辨率
 - 可选择添加负面提示词和调整时长
 - 连接到输出节点查看生成的视频
 
 ### 2. 图生视频节点
-- 添加"阿里云图生视频"节点
+- 添加 "阿里云图生视频" 节点
 - 连接图像输入
 - 输入描述图像动作的提示词
 - 选择模型和分辨率
 - 启用提示词扩展以获得更好效果
 
 ### 3. 首尾帧生视频节点
-- 添加"阿里云首尾帧生视频"节点
+- 添加 "阿里云首尾帧生视频" 节点
 - 连接首帧和尾帧图像
 - 输入过渡描述
 - 生成平滑的过渡视频
 
 ### 4. 视频特效节点
-- 添加"阿里云视频特效"节点
+- 添加 "阿里云视频特效" 节点
 - 连接输入图像
 - 选择特效模板
 - 根据特效类型选择合适的输入图像：
@@ -94,29 +90,28 @@ pip install requests pillow numpy torch
 
 ## 注意事项
 
-1. **API密钥**：必须设置有效的DASHSCOPE_API_KEY环境变量
-2. **网络连接**：需要稳定的网络连接访问阿里云API
-3. **生成时间**：视频生成通常需要1-5分钟，请耐心等待
-4. **计费**：使用API会产生费用，请查看阿里云计费说明
-5. **图像格式**：输入图像会自动转换为PNG格式并编码为base64
-6. **视频下载**：生成的视频会自动下载到ComfyUI的输出目录
+1. API 密钥：不需要设置环境变量。请在 `阿里云API密钥` 节点中填写你的 Key。
+2. 网络连接：需要稳定的网络连接访问阿里云 API。
+3. 生成时间：视频生成通常需要 1-5 分钟，请耐心等待。
+4. 计费：使用 API 会产生费用，请查看阿里云计费说明。
+5. 图像格式：输入图像会自动转换为 PNG 格式并编码为 base64。
+6. 视频下载：生成的视频会自动下载到 ComfyUI 的输出目录。
 
 ## 错误处理
 
 常见错误及解决方法：
 
-1. **API密钥错误**：检查环境变量DASHSCOPE_API_KEY是否正确设置
-2. **网络超时**：检查网络连接，必要时增加超时时间
-3. **模型不支持**：确认选择的模型支持所选的分辨率
-4. **图像格式错误**：确保输入的是有效的图像张量
-5. **任务失败**：检查输入参数是否符合API要求
+1. 任务失败或状态长时间未完成：检查输入参数是否符合 API 要求；必要时增加超时时间。
+2. 模型或分辨率不匹配：确认选择的模型支持所选的分辨率。
+3. 图像格式错误：确保输入的是有效的图像张量。
+4. 网络超时：检查网络连接，必要时重试。
 
 ## 技术支持
 
 如遇到问题，请：
-1. 检查ComfyUI控制台的错误信息
-2. 确认API密钥和网络连接正常
-3. 参考阿里云官方文档：[模型工作室文档](https://help.aliyun.com/zh/model-studio/)
+1. 检查 ComfyUI 控制台的错误信息
+2. 确认 API Key 和网络连接正常
+3. 参考阿里云官方文档（模型工作室）
 
 ## 更新日志
 
@@ -128,4 +123,4 @@ pip install requests pillow numpy torch
 
 ## 许可证
 
-本插件遵循MIT许可证。使用阿里云API需要遵循阿里云的服务条款。
+本插件遵循 MIT 许可证。使用阿里云 API 需要遵循阿里云的服务条款。
