@@ -10,9 +10,11 @@ import requests
 import time
 from typing import Dict, Any, Optional, Tuple
 import folder_paths
+from pathlib import Path
 import numpy as np
 from PIL import Image
 import torch
+import io
 
 class AliyunAPIKey:
     """阿里云API密钥配置节点"""
@@ -116,7 +118,7 @@ class AliyunVideoBase:
                 status = result['output']['task_status']
                 
                 if status == 'SUCCEEDED':
-                    return result['output']['video_url']
+                    return result['output']['results']['video_url']
                 elif status == 'FAILED':
                     raise Exception(f"视频生成失败: {result['output'].get('message', '未知错误')}")
                 elif status in ['PENDING', 'RUNNING']:
@@ -129,7 +131,62 @@ class AliyunVideoBase:
                 time.sleep(10)
         
         raise Exception(f"任务超时 ({timeout}秒)")
-    
+
+    def get_upload_policy(self, api_key:str, model_name:str):
+        """获取文件上传凭证"""
+        url = "https://dashscope.aliyuncs.com/api/v1/uploads"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        params = {
+            "action": "getPolicy",
+            "model": model_name
+        }
+
+        response = requests.get(url, headers=headers, params=params)
+        if response.status_code != 200:
+            raise Exception(f"Failed to get upload policy: {response.text}")
+
+        return response.json()['data']
+
+    def image_to_bytes(self, image_tensor: torch.Tensor) -> bytes:
+        """将PIL图像转换为字节流"""
+        # 转换张量格式
+        if len(image_tensor.shape) == 4:
+            image_tensor = image_tensor.squeeze(0)
+
+        # 转换为PIL图像
+        image_np = (image_tensor.cpu().numpy() * 255).astype(np.uint8)
+        image_pil = Image.fromarray(image_np)
+        with io.BytesIO() as output:
+            image_pil.save(output, format="PNG")
+            return output.getvalue()
+
+    def audio_to_bytes(self, audio) -> bytes:
+        """将音频转换为字节流"""
+        audio_data = audio['waveform']
+        return audio_data
+
+    def upload_file(self, policy_data:dict, file_name: str, file_content: bytes) -> str:
+        """上传文件到阿里云"""
+        key = f"{policy_data['upload_dir']}/{file_name}"
+        files = {
+            'OSSAccessKeyId': (None, policy_data['oss_access_key_id']),
+            'Signature': (None, policy_data['signature']),
+            'policy': (None, policy_data['policy']),
+            'x-oss-object-acl': (None, policy_data['x_oss_object_acl']),
+            'x-oss-forbid-overwrite': (None, policy_data['x_oss_forbid_overwrite']),
+            'key': (None, key),
+            'success_action_status': (None, '200'),
+            'file': (file_name, file_content)
+        }
+        response = requests.post(policy_data['upload_host'], files=files)
+        if response.status_code != 200:
+            raise Exception(f"Failed to upload file: {response.text}")
+        return f"oss://{key}"
+        pass
+
     def download_video(self, video_url: str) -> str:
         """下载视频到本地"""
         # 创建输出目录
@@ -327,6 +384,76 @@ class AliyunImageToVideo(AliyunVideoBase):
         video_path = self.download_video(video_url)
         print(f"视频已保存到: {video_path}")
         
+        return (video_path,)
+
+class AliyunSoundToVideo(AliyunVideoBase):
+    """阿里云图生视频节点"""
+
+    # 中文到英文的模型映射
+    MODEL_MAPPING = {
+        "万相2.2-数字人-s2v": "wan2.2-s2v",
+
+    }
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "api_key": ("STRING", {
+                    "forceInput": True
+                }),
+                "image": ("IMAGE",),
+                "audio": ("AUDIO",),
+                # "model": (["万相2.2-图生视频-增强版", "万相2.2-图生视频-快速版", "万相2.1-图生视频-快速版", "万相2.1-图生视频-增强版"], {
+                #     "default": "万相2.2-图生视频-增强版"
+                # }),
+                "resolution": (["480P", "720P"], {
+                    "default": "720P"
+                }),
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_path",)
+    FUNCTION = "generate_video"
+    CATEGORY = "Aliyun Video"
+
+    def generate_video(self, api_key: str, image: torch.Tensor, audio: torch,
+                       resolution: str) -> Tuple[str]:
+        """生成图生视频"""
+        # 设置API密钥
+        self.set_api_key(api_key)
+
+        # 转换图像为base64
+        policy_data = self.get_upload_policy(api_key, "wan2.2-s2v")
+        img_url = self.upload_file(policy_data, "image.png", self.image_to_bytes(image))
+        audio_url = self.upload_file(policy_data, "audio.mp3", self.audio_to_bytes(audio))
+
+
+        # 将中文模型名称转换为英文
+        english_model = self.MODEL_MAPPING.get("万相2.2-数字人-s2v")
+
+        payload = {
+            "model": english_model,
+            "input": {
+                "img_url": img_url,
+                "audio_url": audio_url #todo
+            },
+            "parameters": {
+                "resolution": resolution,
+            }
+        }
+
+        print(f"开始数字人")
+        task_id = self.create_task(payload)
+        print(f"任务ID: {task_id}")
+
+        video_url = self.wait_for_completion(task_id)
+        print(f"视频生成完成: {video_url}")
+
+        video_path = self.download_video(video_url)
+        print(f"视频已保存到: {video_path}")
+
         return (video_path,)
 
 
@@ -535,6 +662,7 @@ NODE_CLASS_MAPPINGS = {
     "AliyunImageToVideo": AliyunImageToVideo,
     "AliyunFirstLastFrameToVideo": AliyunFirstLastFrameToVideo,
     "AliyunVideoEffects": AliyunVideoEffects,
+    "AliyunSoundToVideo": AliyunSoundToVideo,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -543,4 +671,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "AliyunImageToVideo": "阿里云图生视频", 
     "AliyunFirstLastFrameToVideo": "阿里云首尾帧生视频",
     "AliyunVideoEffects": "阿里云视频特效",
+    "AliyunSoundToVideo": "阿里云数字人",
 }
