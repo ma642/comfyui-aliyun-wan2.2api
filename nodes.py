@@ -14,6 +14,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 import torch
+import torchaudio
 import io
 
 class AliyunAPIKey:
@@ -165,8 +166,11 @@ class AliyunVideoBase:
 
     def audio_to_bytes(self, audio) -> bytes:
         """将音频转换为字节流"""
-        audio_data = audio['waveform']
-        return audio_data
+        audio_data:torch.Tensor = audio['waveform']
+        buffer = io.BytesIO()
+        torchaudio.save(buffer, audio_data, 22050, format="wav")
+        buffer.seek(0)
+        return buffer.getvalue()
 
     def upload_file(self, policy_data:dict, file_name: str, file_content: bytes) -> str:
         """上传文件到阿里云"""
