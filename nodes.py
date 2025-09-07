@@ -465,7 +465,6 @@ class AliyunSoundToVideo(AliyunVideoBase):
 class AliyunVideoTalkByAPI(AliyunVideoBase):
     """阿里云视频对口型节点"""
 
-
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -473,9 +472,13 @@ class AliyunVideoTalkByAPI(AliyunVideoBase):
                 "api_key": ("STRING", {
                     "forceInput": True
                 }),
-                "video_url": ("STRING",),
+                "video_url": ("STRING", {
+                    "forceInput": True
+                }),
                 "audio": ("AUDIO",),
-                "ref_image": ("IMAGE",),
+            },
+            "optional": {
+                "ref_image": ("IMAGE", {}),
             }
         }
 
