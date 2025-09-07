@@ -120,7 +120,8 @@ class AliyunVideoBase:
                 status = result['output']['task_status']
                 
                 if status == 'SUCCEEDED':
-                    return result['output']['results']['video_url']
+                    #数字人与 wan2.2-t2v-plus 模型返回结果不同，需要做兼容处理
+                    return result['output']['results']['video_url'] if result['output'].get('results') else result['output']['video_url']
                 elif status == 'FAILED':
                     raise Exception(f"视频生成失败: {result['output'].get('message', '未知错误')}")
                 elif status in ['PENDING', 'RUNNING']:
