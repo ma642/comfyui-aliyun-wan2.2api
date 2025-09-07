@@ -62,7 +62,8 @@ class AliyunVideoBase:
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "X-DashScope-Async": "enable"
+            "X-DashScope-Async": "enable",
+            "X-DashScope-OssResourceResolve": "enable"
         }
     
     def image_to_base64(self, image_tensor: torch.Tensor) -> str:
@@ -83,12 +84,12 @@ class AliyunVideoBase:
         
         return f"data:image/png;base64,{image_base64}"
     
-    def create_task(self, payload: Dict[str, Any]) -> str:
+    def create_task(self, payload: Dict[str, Any], url:str|None) -> str:
         """创建视频生成任务"""
         if not self.headers:
             raise Exception("请先设置API密钥")
             
-        response = requests.post(self.base_url, headers=self.headers, json=payload)
+        response = requests.post(url or self.base_url, headers=self.headers, json=payload)
         
         if response.status_code != 200:
             raise Exception(f"API请求失败: {response.status_code} - {response.text}")
@@ -167,8 +168,9 @@ class AliyunVideoBase:
     def audio_to_bytes(self, audio) -> bytes:
         """将音频转换为字节流"""
         audio_data:torch.Tensor = audio['waveform']
+        #x, num_channels, num_frames = audio_data.shape
         buffer = io.BytesIO()
-        torchaudio.save(buffer, audio_data, 22050, format="wav")
+        torchaudio.save(buffer, audio_data.squeeze(1), 22050, format="wav")
         buffer.seek(0)
         return buffer.getvalue()
 
@@ -408,8 +410,6 @@ class AliyunSoundToVideo(AliyunVideoBase):
                 }),
                 "image": ("IMAGE",),
                 "audio": ("AUDIO",),
-                # "model": (["万相2.2-图生视频-增强版", "万相2.2-图生视频-快速版", "万相2.1-图生视频-快速版", "万相2.1-图生视频-增强版"], {
-                #     "default": "万相2.2-图生视频-增强版"
                 # }),
                 "resolution": (["480P", "720P"], {
                     "default": "720P"
@@ -440,7 +440,7 @@ class AliyunSoundToVideo(AliyunVideoBase):
         payload = {
             "model": english_model,
             "input": {
-                "img_url": img_url,
+                "image_url": img_url,
                 "audio_url": audio_url #todo
             },
             "parameters": {
@@ -448,8 +448,9 @@ class AliyunSoundToVideo(AliyunVideoBase):
             }
         }
 
-        print(f"开始数字人")
-        task_id = self.create_task(payload)
+        print(f"开始数字人", payload)
+        url = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/image2video/video-synthesis/'
+        task_id = self.create_task(payload, url=url)
         print(f"任务ID: {task_id}")
 
         video_url = self.wait_for_completion(task_id)
