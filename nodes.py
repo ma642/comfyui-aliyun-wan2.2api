@@ -84,7 +84,7 @@ class AliyunVideoBase:
         
         return f"data:image/png;base64,{image_base64}"
     
-    def create_task(self, payload: Dict[str, Any], url:str|None) -> str:
+    def create_task(self, payload: Dict[str, Any], url:str|None = None) -> str:
         """创建视频生成任务"""
         if not self.headers:
             raise Exception("请先设置API密钥")
@@ -169,9 +169,11 @@ class AliyunVideoBase:
     def audio_to_bytes(self, audio) -> bytes:
         """将音频转换为字节流"""
         audio_data:torch.Tensor = audio['waveform']
-        #x, num_channels, num_frames = audio_data.shape
+        sr:int = audio['sample_rate']
+        if audio_data.shape[1] == 2:
+            audio_data = torch.mean(audio_data, dim=1, keepdim=True)
         buffer = io.BytesIO()
-        torchaudio.save(buffer, audio_data.squeeze(1), 22050, format="wav")
+        torchaudio.save(buffer, audio_data.squeeze(1), sr, format="wav")
         buffer.seek(0)
         return buffer.getvalue()
 
@@ -478,7 +480,9 @@ class AliyunVideoTalkByAPI(AliyunVideoBase):
                 "audio": ("AUDIO",),
             },
             "optional": {
-                "ref_image": ("IMAGE", {}),
+                "ref_image": ("IMAGE", {
+                     "default": None,
+                 }),
             }
         }
 
@@ -487,15 +491,15 @@ class AliyunVideoTalkByAPI(AliyunVideoBase):
     FUNCTION = "generate_video"
     CATEGORY = "Aliyun Video"
 
-    def generate_video(self, api_key: str, video_url: str, audio: torch.Tensor, image: torch.Tensor) -> Tuple[str]:
+    def generate_video(self, api_key: str, video_url: str, audio: torch.Tensor, ref_image: torch.Tensor = None) -> Tuple[str]:
         """生成图生视频"""
         # 设置API密钥
         self.set_api_key(api_key)
 
         # 转换图像为base64
         policy_data = self.get_upload_policy(api_key, "videoretalk")
-        if image is not None:
-            img_url = self.upload_file(policy_data, "image.png", self.image_to_bytes(image))
+        if ref_image is not None:
+            img_url = self.upload_file(policy_data, "image.png", self.image_to_bytes(ref_image))
         else:
             img_url = None
 
@@ -511,16 +515,18 @@ class AliyunVideoTalkByAPI(AliyunVideoBase):
             "model": english_model,
             "input": {
                 "video_url": video_url_remote,
-                "ref_image_url": img_url,
                 "audio_url": audio_url #todo
             },
             "parameters": {
                 "video_extension": True,
             }
         }
+        if img_url is not None:
+            payload["input"]["ref_image_url"] = img_url
 
         print(f"开始视频对口型", payload)
-        task_id = self.create_task(payload)
+        url = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/image2video/video-synthesis/'
+        task_id = self.create_task(payload, url=url)
         print(f"任务ID: {task_id}")
 
         video_url = self.wait_for_completion(task_id)
