@@ -476,9 +476,6 @@ class AliyunVideoTalk(AliyunVideoBase):
                 "video_url": ("STRING",),
                 "audio": ("AUDIO",),
                 "ref_image": ("IMAGE",),
-                "resolution": (["480P", "720P"], {
-                    "default": "720P"
-                }),
             }
         }
 
@@ -487,8 +484,7 @@ class AliyunVideoTalk(AliyunVideoBase):
     FUNCTION = "generate_video"
     CATEGORY = "Aliyun Video"
 
-    def generate_video(self, api_key: str, video_url: str, audio: torch.Tensor, image: torch.Tensor,
-                       resolution: str) -> Tuple[str]:
+    def generate_video(self, api_key: str, video_url: str, audio: torch.Tensor, image: torch.Tensor) -> Tuple[str]:
         """生成图生视频"""
         # 设置API密钥
         self.set_api_key(api_key)
