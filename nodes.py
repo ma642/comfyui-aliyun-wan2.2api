@@ -738,6 +738,7 @@ NODE_CLASS_MAPPINGS = {
     "AliyunFirstLastFrameToVideo": AliyunFirstLastFrameToVideo,
     "AliyunVideoEffects": AliyunVideoEffects,
     "AliyunSoundToVideo": AliyunSoundToVideo,
+    "AliyunVideoTalk": AliyunVideoTalk,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -747,4 +748,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "AliyunFirstLastFrameToVideo": "阿里云首尾帧生视频",
     "AliyunVideoEffects": "阿里云视频特效",
     "AliyunSoundToVideo": "阿里云数字人",
+    "AliyunVideoTalk": "阿里云视频对口型"
 }
