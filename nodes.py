@@ -394,7 +394,7 @@ class AliyunImageToVideo(AliyunVideoBase):
         return (video_path,)
 
 class AliyunSoundToVideo(AliyunVideoBase):
-    """阿里云图生视频节点"""
+    """阿里云图片数字人节点"""
 
     # 中文到英文的模型映射
     MODEL_MAPPING = {
@@ -462,6 +462,75 @@ class AliyunSoundToVideo(AliyunVideoBase):
 
         return (video_path,)
 
+class AliyunVideoTalk(AliyunVideoBase):
+    """阿里云视频对口型节点"""
+
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "api_key": ("STRING", {
+                    "forceInput": True
+                }),
+                "video_url": ("STRING",),
+                "audio": ("AUDIO",),
+                "ref_image": ("IMAGE",),
+                "resolution": (["480P", "720P"], {
+                    "default": "720P"
+                }),
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("video_path",)
+    FUNCTION = "generate_video"
+    CATEGORY = "Aliyun Video"
+
+    def generate_video(self, api_key: str, video_url: str, audio: torch, image: torch.Tensor,
+                       resolution: str) -> Tuple[str]:
+        """生成图生视频"""
+        # 设置API密钥
+        self.set_api_key(api_key)
+
+        # 转换图像为base64
+        policy_data = self.get_upload_policy(api_key, "videoretalk")
+        if image is not None:
+            img_url = self.upload_file(policy_data, "image.png", self.image_to_bytes(image))
+        else:
+            img_url = None
+
+        audio_url = self.upload_file(policy_data, "audio.mp3", self.audio_to_bytes(audio))
+        with open(video_url, 'rb') as f:
+            video_data = f.read()
+            video_url_remote = self.upload_file(policy_data, "video.mp4", video_data)
+
+        # 将中文模型名称转换为英文
+        english_model = "videoretalk"
+
+        payload = {
+            "model": english_model,
+            "input": {
+                "video_url": video_url_remote,
+                "ref_image_url": img_url,
+                "audio_url": audio_url #todo
+            },
+            "parameters": {
+                "video_extension": True,
+            }
+        }
+
+        print(f"开始视频对口型", payload)
+        task_id = self.create_task(payload)
+        print(f"任务ID: {task_id}")
+
+        video_url = self.wait_for_completion(task_id)
+        print(f"视频生成完成: {video_url}")
+
+        video_path = self.download_video(video_url)
+        print(f"视频已保存到: {video_path}")
+
+        return (video_path,)
 
 class AliyunFirstLastFrameToVideo(AliyunVideoBase):
     """阿里云首尾帧生视频节点"""
