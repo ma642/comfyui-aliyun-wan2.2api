@@ -487,7 +487,7 @@ class AliyunVideoTalk(AliyunVideoBase):
     FUNCTION = "generate_video"
     CATEGORY = "Aliyun Video"
 
-    def generate_video(self, api_key: str, video_url: str, audio: torch, image: torch.Tensor,
+    def generate_video(self, api_key: str, video_url: str, audio: torch.Tensor, image: torch.Tensor,
                        resolution: str) -> Tuple[str]:
         """生成图生视频"""
         # 设置API密钥
